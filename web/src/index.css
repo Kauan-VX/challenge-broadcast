@@ -25,9 +25,8 @@ input[type='time'] {
 input[type='datetime-local']::-webkit-calendar-picker-indicator,
 input[type='date']::-webkit-calendar-picker-indicator,
 input[type='time']::-webkit-calendar-picker-indicator {
-  filter: invert(86%) sepia(64%) saturate(2384%) hue-rotate(2deg) brightness(105%) contrast(105%);
+  filter: brightness(0) saturate(100%) invert(89%) sepia(82%) saturate(1437%) hue-rotate(331deg) brightness(99%) contrast(108%);
   cursor: pointer;
-  opacity: 0.9;
 }
 
 input[type='datetime-local']::-webkit-datetime-edit-text,

@@ -18,6 +18,12 @@ type Props = {
   onCancel: () => void;
 };
 
+function nowLocalInput(): string {
+  const date = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export function MessageComposer({ onCancel }: Props) {
   const {
     control,
@@ -137,6 +143,7 @@ export function MessageComposer({ onCancel }: Props) {
                     onChange={field.onChange}
                     onBlur={field.onBlur}
                     inputRef={field.ref}
+                    inputProps={{ min: nowLocalInput() }}
                     error={Boolean(errors.scheduledFor)}
                     helperText={errors.scheduledFor?.message}
                   />
