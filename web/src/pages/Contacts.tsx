@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { Link as RouterLink, Navigate, useParams } from 'react-router-dom';
 import {
   Avatar,
@@ -7,13 +7,7 @@ import {
   Button,
   Card,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Divider,
   IconButton,
-  InputAdornment,
   Link,
   Stack,
   Table,
@@ -21,28 +15,22 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  TextField,
   Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined';
-import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
-import PhoneIcon from '@mui/icons-material/Phone';
 import { useAuth } from '../hooks/useAuth';
 import { useConnection } from '../hooks/useConnection';
 import { useContacts } from '../hooks/useContacts';
-import {
-  createContact,
-  deleteContact,
-  updateContact,
-} from '../services/contacts';
+import { deleteContact } from '../services/contacts';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ConnectionTabs } from '../components/ConnectionTabs';
+import { ContactFormDialog } from '../components/ContactFormDialog';
 import { EmptyState } from '../components/EmptyState';
 import { PageHeader } from '../components/PageHeader';
-import { formatPhone, isValidPhone } from '../lib/phone';
+import { formatPhone } from '../lib/phone';
 import type { Contact } from '../types';
 
 function initials(name: string): string {
@@ -60,47 +48,16 @@ export function Contacts() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Contact | null>(null);
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [saving, setSaving] = useState(false);
   const [toDelete, setToDelete] = useState<Contact | null>(null);
 
   function openCreate() {
     setEditing(null);
-    setName('');
-    setPhone('');
     setFormOpen(true);
   }
 
   function openEdit(contact: Contact) {
     setEditing(contact);
-    setName(contact.name);
-    setPhone(formatPhone(contact.phone));
     setFormOpen(true);
-  }
-
-  const phoneValid = isValidPhone(phone);
-  const canSubmit = name.trim().length > 0 && phoneValid;
-
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    if (!user || !canSubmit) return;
-    setSaving(true);
-    try {
-      if (editing) {
-        await updateContact(editing.id, name, phone);
-      } else {
-        await createContact({
-          userId: user.uid,
-          connectionId,
-          name,
-          phone,
-        });
-      }
-      setFormOpen(false);
-    } finally {
-      setSaving(false);
-    }
   }
 
   async function handleDelete() {
@@ -219,81 +176,15 @@ export function Contacts() {
         </Card>
       )}
 
-      <Dialog
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
-      >
-        <Box component="form" onSubmit={handleSubmit}>
-          <DialogTitle sx={{ pb: 1 }}>
-            <Typography variant="h6">
-              {editing ? 'Editar contato' : 'Novo contato'}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {editing
-                ? 'Atualize as informações do contato.'
-                : 'Preencha o nome e o telefone para cadastrar.'}
-            </Typography>
-          </DialogTitle>
-          <Divider />
-          <DialogContent sx={{ pt: 3 }}>
-            <Stack spacing={2.5}>
-              <TextField
-                label="Nome"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                autoFocus
-                required
-                fullWidth
-                placeholder="Ex.: João Silva"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <PersonOutlineIcon fontSize="small" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-              <TextField
-                label="Telefone"
-                value={phone}
-                onChange={(e) => setPhone(formatPhone(e.target.value))}
-                required
-                fullWidth
-                placeholder="(11) 99999-0000"
-                inputMode="tel"
-                error={phone.length > 0 && !phoneValid}
-                helperText={
-                  phone.length > 0 && !phoneValid
-                    ? 'Informe um telefone válido com DDD.'
-                    : 'Inclua o DDD. Ex.: (11) 99999-0000'
-                }
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <PhoneIcon fontSize="small" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Stack>
-          </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2.5 }}>
-            <Button onClick={() => setFormOpen(false)} color="inherit">
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={saving || !canSubmit}
-            >
-              {saving ? <CircularProgress size={20} color="inherit" /> : 'Salvar'}
-            </Button>
-          </DialogActions>
-        </Box>
-      </Dialog>
+      {user && (
+        <ContactFormDialog
+          open={formOpen}
+          editing={editing}
+          userId={user.uid}
+          connectionId={connectionId}
+          onClose={() => setFormOpen(false)}
+        />
+      )}
 
       <ConfirmDialog
         open={Boolean(toDelete)}
