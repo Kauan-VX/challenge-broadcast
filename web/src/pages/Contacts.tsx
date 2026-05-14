@@ -24,6 +24,8 @@ import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined';
 import { useAuth } from '../hooks/useAuth';
 import { useConnection } from '../hooks/useConnection';
 import { useContacts } from '../hooks/useContacts';
+import { useDisclosure } from '../hooks/useDisclosure';
+import { useToast } from '../hooks/useToast';
 import { deleteContact } from '../services/contacts';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ConnectionTabs } from '../components/ConnectionTabs';
@@ -45,25 +47,32 @@ export function Contacts() {
   const { user } = useAuth();
   const { connection, loading: connectionLoading, notFound } = useConnection(connectionId);
   const { contacts, loading } = useContacts(user?.uid, connectionId);
+  const toast = useToast();
 
-  const [formOpen, setFormOpen] = useState(false);
+  const form = useDisclosure();
   const [editing, setEditing] = useState<Contact | null>(null);
   const [toDelete, setToDelete] = useState<Contact | null>(null);
 
   function openCreate() {
     setEditing(null);
-    setFormOpen(true);
+    form.onOpen();
   }
 
   function openEdit(contact: Contact) {
     setEditing(contact);
-    setFormOpen(true);
+    form.onOpen();
   }
 
   async function handleDelete() {
     if (!toDelete) return;
-    await deleteContact(toDelete.id);
-    setToDelete(null);
+    try {
+      await deleteContact(toDelete.id);
+      toast.success('Contato excluído.');
+    } catch {
+      toast.error('Não foi possível excluir o contato.');
+    } finally {
+      setToDelete(null);
+    }
   }
 
   if (notFound && !connectionLoading) {
@@ -178,11 +187,11 @@ export function Contacts() {
 
       {user && (
         <ContactFormDialog
-          open={formOpen}
+          open={form.open}
           editing={editing}
           userId={user.uid}
           connectionId={connectionId}
-          onClose={() => setFormOpen(false)}
+          onClose={form.onClose}
         />
       )}
 

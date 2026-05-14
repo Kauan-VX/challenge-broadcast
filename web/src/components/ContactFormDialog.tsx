@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect } from 'react';
 import {
   Box,
   Button,
@@ -15,8 +15,12 @@ import {
 } from '@mui/material';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import PhoneIcon from '@mui/icons-material/Phone';
+import { Controller, useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { createContact, updateContact } from '../services/contacts';
-import { formatPhone, isValidPhone } from '../lib/phone';
+import { useToast } from '../hooks/useToast';
+import { formatPhone } from '../lib/phone';
+import { contactSchema, type ContactInput } from '../schemas/contact';
 import type { Contact } from '../types';
 
 type Props = {
@@ -34,38 +38,44 @@ export function ContactFormDialog({
   connectionId,
   onClose,
 }: Props) {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [saving, setSaving] = useState(false);
+  const toast = useToast();
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<ContactInput>({
+    resolver: zodResolver(contactSchema),
+    defaultValues: { name: '', phone: '' },
+  });
 
   useEffect(() => {
     if (open) {
-      setName(editing?.name ?? '');
-      setPhone(editing ? formatPhone(editing.phone) : '');
+      reset({
+        name: editing?.name ?? '',
+        phone: editing ? formatPhone(editing.phone) : '',
+      });
     }
-  }, [open, editing]);
+  }, [open, editing, reset]);
 
-  const phoneValid = isValidPhone(phone);
-  const canSubmit = name.trim().length > 0 && phoneValid;
-
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    if (!canSubmit) return;
-    setSaving(true);
+  async function onSubmit(values: ContactInput) {
     try {
       if (editing) {
-        await updateContact(editing.id, name, phone);
+        await updateContact(editing.id, values.name, values.phone);
+        toast.success('Contato atualizado.');
       } else {
         await createContact({
           userId,
           connectionId,
-          name,
-          phone,
+          name: values.name,
+          phone: values.phone,
         });
+        toast.success('Contato criado.');
       }
       onClose();
-    } finally {
-      setSaving(false);
+    } catch {
+      toast.error('Não foi possível salvar o contato.');
     }
   }
 
@@ -77,7 +87,7 @@ export function ContactFormDialog({
       fullWidth
       PaperProps={{ sx: { borderRadius: 3 } }}
     >
-      <Box component="form" onSubmit={handleSubmit}>
+      <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
         <DialogTitle sx={{ pb: 1 }}>
           <Typography variant="h6">
             {editing ? 'Editar contato' : 'Novo contato'}
@@ -93,12 +103,11 @@ export function ContactFormDialog({
           <Stack spacing={2.5}>
             <TextField
               label="Nome"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
               autoFocus
-              required
               fullWidth
               placeholder="Ex.: João Silva"
+              error={Boolean(errors.name)}
+              helperText={errors.name?.message}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -106,28 +115,34 @@ export function ContactFormDialog({
                   </InputAdornment>
                 ),
               }}
+              {...register('name')}
             />
-            <TextField
-              label="Telefone"
-              value={phone}
-              onChange={(e) => setPhone(formatPhone(e.target.value))}
-              required
-              fullWidth
-              placeholder="(11) 99999-0000"
-              inputMode="tel"
-              error={phone.length > 0 && !phoneValid}
-              helperText={
-                phone.length > 0 && !phoneValid
-                  ? 'Informe um telefone válido com DDD.'
-                  : 'Inclua o DDD. Ex.: (11) 99999-0000'
-              }
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <PhoneIcon fontSize="small" />
-                  </InputAdornment>
-                ),
-              }}
+            <Controller
+              name="phone"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  label="Telefone"
+                  fullWidth
+                  placeholder="(11) 99999-0000"
+                  inputMode="tel"
+                  value={field.value}
+                  onChange={(e) => field.onChange(formatPhone(e.target.value))}
+                  onBlur={field.onBlur}
+                  inputRef={field.ref}
+                  error={Boolean(errors.phone)}
+                  helperText={
+                    errors.phone?.message ?? 'Inclua o DDD. Ex.: (11) 99999-0000'
+                  }
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <PhoneIcon fontSize="small" />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              )}
             />
           </Stack>
         </DialogContent>
@@ -135,8 +150,8 @@ export function ContactFormDialog({
           <Button onClick={onClose} color="inherit">
             Cancelar
           </Button>
-          <Button type="submit" variant="contained" disabled={saving || !canSubmit}>
-            {saving ? <CircularProgress size={20} color="inherit" /> : 'Salvar'}
+          <Button type="submit" variant="contained" disabled={isSubmitting}>
+            {isSubmitting ? <CircularProgress size={20} color="inherit" /> : 'Salvar'}
           </Button>
         </DialogActions>
       </Box>

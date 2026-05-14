@@ -5,6 +5,8 @@ import AddIcon from '@mui/icons-material/Add';
 import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
 import { useAuth } from '../hooks/useAuth';
 import { useConnections } from '../hooks/useConnections';
+import { useDisclosure } from '../hooks/useDisclosure';
+import { useToast } from '../hooks/useToast';
 import { deleteConnection } from '../services/connections';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ConnectionCard } from '../components/ConnectionCard';
@@ -17,25 +19,32 @@ export function Connections() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { connections, loading } = useConnections(user?.uid);
+  const toast = useToast();
 
-  const [formOpen, setFormOpen] = useState(false);
+  const form = useDisclosure();
   const [editing, setEditing] = useState<Connection | null>(null);
   const [toDelete, setToDelete] = useState<Connection | null>(null);
 
   function openCreate() {
     setEditing(null);
-    setFormOpen(true);
+    form.onOpen();
   }
 
   function openEdit(connection: Connection) {
     setEditing(connection);
-    setFormOpen(true);
+    form.onOpen();
   }
 
   async function handleDelete() {
     if (!user || !toDelete) return;
-    await deleteConnection(user.uid, toDelete.id);
-    setToDelete(null);
+    try {
+      await deleteConnection(user.uid, toDelete.id);
+      toast.success('Conexão excluída.');
+    } catch {
+      toast.error('Não foi possível excluir a conexão.');
+    } finally {
+      setToDelete(null);
+    }
   }
 
   return (
@@ -91,10 +100,10 @@ export function Connections() {
 
       {user && (
         <ConnectionFormDialog
-          open={formOpen}
+          open={form.open}
           editing={editing}
           userId={user.uid}
-          onClose={() => setFormOpen(false)}
+          onClose={form.onClose}
         />
       )}
 

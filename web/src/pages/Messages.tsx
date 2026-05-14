@@ -30,6 +30,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useConnection } from '../hooks/useConnection';
 import { useContacts } from '../hooks/useContacts';
 import { useMessages } from '../hooks/useMessages';
+import { useToast } from '../hooks/useToast';
 import { deleteMessage } from '../services/messages';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ConnectionTabs } from '../components/ConnectionTabs';
@@ -49,6 +50,7 @@ export function Messages() {
   const { connection, loading: connectionLoading, notFound } = useConnection(connectionId);
   const { contacts } = useContacts(user?.uid, connectionId);
   const { messages, loading } = useMessages(user?.uid, connectionId);
+  const toast = useToast();
 
   const [filter, setFilter] = useState<MessageFilter>('all');
   const [toDelete, setToDelete] = useState<Message | null>(null);
@@ -65,8 +67,14 @@ export function Messages() {
 
   async function handleDelete() {
     if (!toDelete) return;
-    await deleteMessage(toDelete.id);
-    setToDelete(null);
+    try {
+      await deleteMessage(toDelete.id);
+      toast.success('Mensagem excluída.');
+    } catch {
+      toast.error('Não foi possível excluir a mensagem.');
+    } finally {
+      setToDelete(null);
+    }
   }
 
   if (notFound && !connectionLoading) {

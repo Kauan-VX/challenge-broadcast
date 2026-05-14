@@ -1,9 +1,16 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
+import {
+  CssBaseline,
+  GlobalStyles,
+  StyledEngineProvider,
+  ThemeProvider,
+  createTheme,
+} from '@mui/material';
 import { App } from './App';
 import { AuthProvider } from './contexts/AuthContext';
+import { ToastProvider } from './contexts/ToastContext';
 import './index.css';
 
 const brand = '#FFDE06';
@@ -129,18 +136,32 @@ const theme = createTheme({
         },
       },
     },
+    MuiCheckbox: {
+      defaultProps: { color: 'primary' },
+      styleOverrides: {
+        root: {
+          color: '#FFDE06',
+          '&.Mui-checked': { color: '#FFDE06' },
+        },
+      },
+    },
   },
 });
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <BrowserRouter>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </BrowserRouter>
-    </ThemeProvider>
+    <StyledEngineProvider enableCssLayer>
+      <GlobalStyles styles="@layer theme, base, mui, components, utilities;" />
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <ToastProvider>
+          <BrowserRouter>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </BrowserRouter>
+        </ToastProvider>
+      </ThemeProvider>
+    </StyledEngineProvider>
   </StrictMode>,
 );

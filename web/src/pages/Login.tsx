@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { Link as RouterLink, Navigate, useNavigate } from 'react-router-dom';
 import {
   Alert,
@@ -11,18 +11,27 @@ import {
   Typography,
 } from '@mui/material';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { auth } from '../lib/firebase';
 import { useAuth } from '../hooks/useAuth';
 import { AuthShell } from '../components/AuthShell';
+import { PasswordField } from '../components/PasswordField';
+import { loginSchema, type LoginInput } from '../schemas/login';
 
 export function Login() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
 
   if (loading) {
     return (
@@ -36,18 +45,13 @@ export function Login() {
     return <Navigate to="/" replace />;
   }
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    setSubmitting(true);
+  async function onSubmit(values: LoginInput) {
     setError(null);
-
     try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
+      await signInWithEmailAndPassword(auth, values.email.trim(), values.password);
       navigate('/', { replace: true });
     } catch {
       setError('E-mail ou senha incorretos.');
-    } finally {
-      setSubmitting(false);
     }
   }
 
@@ -56,28 +60,27 @@ export function Login() {
       title="Bem-vindo de volta"
       subtitle="Entre com sua conta para continuar."
     >
-      <Box component="form" onSubmit={handleSubmit}>
+      <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
         <Stack spacing={2.5}>
           <TextField
             label="E-mail"
             type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
             autoFocus
             fullWidth
             InputLabelProps={{ shrink: true }}
             placeholder="seu@email.com"
+            error={Boolean(errors.email)}
+            helperText={errors.email?.message}
+            {...register('email')}
           />
-          <TextField
+          <PasswordField
             label="Senha"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
             fullWidth
             InputLabelProps={{ shrink: true }}
             placeholder="••••••••"
+            error={Boolean(errors.password)}
+            helperText={errors.password?.message}
+            {...register('password')}
           />
 
           {error && <Alert severity="error">{error}</Alert>}
@@ -86,10 +89,10 @@ export function Login() {
             type="submit"
             variant="contained"
             size="large"
-            disabled={submitting}
+            disabled={isSubmitting}
             sx={{ py: 1.4, fontSize: 15 }}
           >
-            {submitting ? <CircularProgress size={22} color="inherit" /> : 'Entrar'}
+            {isSubmitting ? <CircularProgress size={22} color="inherit" /> : 'Entrar'}
           </Button>
 
           <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 1 }}>

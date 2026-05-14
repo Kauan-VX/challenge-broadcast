@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { Link as RouterLink, Navigate, useNavigate } from 'react-router-dom';
 import {
   Alert,
@@ -12,18 +12,27 @@ import {
 } from '@mui/material';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { auth } from '../lib/firebase';
 import { useAuth } from '../hooks/useAuth';
 import { AuthShell } from '../components/AuthShell';
+import { PasswordField } from '../components/PasswordField';
+import { signupSchema, type SignupInput } from '../schemas/signup';
 
 export function Signup() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<SignupInput>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: { email: '', password: '' },
+  });
 
   if (loading) {
     return (
@@ -37,13 +46,10 @@ export function Signup() {
     return <Navigate to="/" replace />;
   }
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    setSubmitting(true);
+  async function onSubmit(values: SignupInput) {
     setError(null);
-
     try {
-      await createUserWithEmailAndPassword(auth, email.trim(), password);
+      await createUserWithEmailAndPassword(auth, values.email.trim(), values.password);
       navigate('/', { replace: true });
     } catch (err) {
       if (err instanceof FirebaseError && err.code === 'auth/email-already-in-use') {
@@ -53,8 +59,6 @@ export function Signup() {
       } else {
         setError('Não foi possível concluir o cadastro.');
       }
-    } finally {
-      setSubmitting(false);
     }
   }
 
@@ -63,29 +67,27 @@ export function Signup() {
       title="Criar conta"
       subtitle="Comece a usar o Broadcast agora."
     >
-      <Box component="form" onSubmit={handleSubmit}>
+      <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
         <Stack spacing={2.5}>
           <TextField
             label="E-mail"
             type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
             autoFocus
             fullWidth
             InputLabelProps={{ shrink: true }}
             placeholder="seu@email.com"
+            error={Boolean(errors.email)}
+            helperText={errors.email?.message}
+            {...register('email')}
           />
-          <TextField
+          <PasswordField
             label="Senha"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
             fullWidth
-            helperText="Mínimo de 6 caracteres."
             InputLabelProps={{ shrink: true }}
             placeholder="••••••••"
+            error={Boolean(errors.password)}
+            helperText={errors.password?.message ?? 'Mínimo de 6 caracteres.'}
+            {...register('password')}
           />
 
           {error && <Alert severity="error">{error}</Alert>}
@@ -94,10 +96,10 @@ export function Signup() {
             type="submit"
             variant="contained"
             size="large"
-            disabled={submitting}
+            disabled={isSubmitting}
             sx={{ py: 1.4, fontSize: 15 }}
           >
-            {submitting ? <CircularProgress size={22} color="inherit" /> : 'Cadastrar'}
+            {isSubmitting ? <CircularProgress size={22} color="inherit" /> : 'Cadastrar'}
           </Button>
 
           <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 1 }}>

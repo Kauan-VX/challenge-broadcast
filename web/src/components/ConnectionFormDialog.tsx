@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect } from 'react';
 import {
   Box,
   Button,
@@ -11,7 +11,11 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { createConnection, updateConnection } from '../services/connections';
+import { useToast } from '../hooks/useToast';
+import { connectionSchema, type ConnectionInput } from '../schemas/connection';
 import type { Connection } from '../types';
 
 type Props = {
@@ -22,28 +26,35 @@ type Props = {
 };
 
 export function ConnectionFormDialog({ open, editing, userId, onClose }: Props) {
-  const [name, setName] = useState('');
-  const [saving, setSaving] = useState(false);
+  const toast = useToast();
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<ConnectionInput>({
+    resolver: zodResolver(connectionSchema),
+    defaultValues: { name: '' },
+  });
 
   useEffect(() => {
     if (open) {
-      setName(editing?.name ?? '');
+      reset({ name: editing?.name ?? '' });
     }
-  }, [open, editing]);
+  }, [open, editing, reset]);
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    if (!name.trim()) return;
-    setSaving(true);
+  async function onSubmit(values: ConnectionInput) {
     try {
       if (editing) {
-        await updateConnection(editing.id, name);
+        await updateConnection(editing.id, values.name);
+        toast.success('Conexão atualizada.');
       } else {
-        await createConnection(userId, name);
+        await createConnection(userId, values.name);
+        toast.success('Conexão criada.');
       }
       onClose();
-    } finally {
-      setSaving(false);
+    } catch {
+      toast.error('Não foi possível salvar a conexão.');
     }
   }
 
@@ -55,7 +66,7 @@ export function ConnectionFormDialog({ open, editing, userId, onClose }: Props) 
       fullWidth
       PaperProps={{ sx: { borderRadius: 3 } }}
     >
-      <Box component="form" onSubmit={handleSubmit}>
+      <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
         <DialogTitle sx={{ pb: 1 }}>
           <Typography variant="h6">
             {editing ? 'Editar conexão' : 'Nova conexão'}
@@ -70,20 +81,20 @@ export function ConnectionFormDialog({ open, editing, userId, onClose }: Props) 
         <DialogContent sx={{ pt: 3 }}>
           <TextField
             label="Nome"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
             autoFocus
             fullWidth
-            required
             placeholder="Ex.: Atendimento Principal"
+            error={Boolean(errors.name)}
+            helperText={errors.name?.message}
+            {...register('name')}
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button onClick={onClose} color="inherit">
             Cancelar
           </Button>
-          <Button type="submit" variant="contained" disabled={saving || !name.trim()}>
-            {saving ? <CircularProgress size={20} color="inherit" /> : 'Salvar'}
+          <Button type="submit" variant="contained" disabled={isSubmitting}>
+            {isSubmitting ? <CircularProgress size={20} color="inherit" /> : 'Salvar'}
           </Button>
         </DialogActions>
       </Box>
