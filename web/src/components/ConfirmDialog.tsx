@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import {
   Box,
   Button,
@@ -26,6 +27,11 @@ export function ConfirmDialog({
   onClose,
   confirmLabel = 'Excluir',
 }: Props) {
+  const snapshot = useRef({ title, description });
+  if (open) {
+    snapshot.current = { title, description };
+  }
+
   return (
     <Dialog
       open={open}
@@ -49,11 +55,11 @@ export function ConfirmDialog({
         >
           <WarningAmberRoundedIcon />
         </Box>
-        <Typography variant="h6">{title}</Typography>
+        <Typography variant="h6">{snapshot.current.title}</Typography>
       </DialogTitle>
       <DialogContent>
         <Typography variant="body2" color="text.secondary">
-          {description}
+          {snapshot.current.description}
         </Typography>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2.5 }}>

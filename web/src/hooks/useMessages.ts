@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   collection,
+  limit as limitFn,
   onSnapshot,
   orderBy,
   query,
@@ -12,6 +13,7 @@ import type { Message } from '../types';
 export function useMessages(
   userId: string | undefined,
   connectionId: string | undefined,
+  pageSize = 50,
 ) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,6 +31,7 @@ export function useMessages(
       where('userId', '==', userId),
       where('connectionId', '==', connectionId),
       orderBy('createdAt', 'desc'),
+      limitFn(pageSize),
     );
 
     const unsubscribe = onSnapshot(q, (snap) => {
@@ -41,7 +44,7 @@ export function useMessages(
     });
 
     return unsubscribe;
-  }, [userId, connectionId]);
+  }, [userId, connectionId, pageSize]);
 
   return { messages, loading };
 }

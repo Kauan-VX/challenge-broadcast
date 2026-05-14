@@ -62,10 +62,12 @@ export function SendMessage() {
     defaultValues: emptyForm,
   });
 
+  const { reset } = methods;
+
   useEffect(() => {
     if (!editId) {
       setEditing(null);
-      methods.reset(emptyForm);
+      reset(emptyForm);
       setLoadingEdit(false);
       return;
     }
@@ -83,7 +85,7 @@ export function SendMessage() {
 
       const data = snap.data() as Omit<Message, 'id'>;
       setEditing({ id: snap.id, ...data });
-      methods.reset({
+      reset({
         content: data.content,
         contactIds: data.contactIds,
         schedule: Boolean(data.scheduledFor),
@@ -97,7 +99,7 @@ export function SendMessage() {
     return () => {
       active = false;
     };
-  }, [editId, methods]);
+  }, [editId, reset]);
 
   async function onSubmit(values: MessageInput) {
     if (!user) return;

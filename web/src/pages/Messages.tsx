@@ -22,6 +22,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import ChatBubbleOutlineRoundedIcon from '@mui/icons-material/ChatBubbleOutlineRounded';
 import ScheduleRoundedIcon from '@mui/icons-material/ScheduleRounded';
 import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
@@ -35,8 +36,11 @@ import { deleteMessage } from '../services/messages';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ConnectionTabs } from '../components/ConnectionTabs';
 import { EmptyState } from '../components/EmptyState';
+import { MessageDetailDialog } from '../components/MessageDetailDialog';
 import { PageHeader } from '../components/PageHeader';
 import type { Message, MessageFilter } from '../types';
+
+const PAGE_STEP = 50;
 
 function formatDate(value: Message['scheduledFor']): string {
   if (!value) return '—';
@@ -49,11 +53,14 @@ export function Messages() {
   const { user } = useAuth();
   const { connection, loading: connectionLoading, notFound } = useConnection(connectionId);
   const { contacts } = useContacts(user?.uid, connectionId);
-  const { messages, loading } = useMessages(user?.uid, connectionId);
+  const [pageSize, setPageSize] = useState(PAGE_STEP);
+  const { messages, loading } = useMessages(user?.uid, connectionId, pageSize);
   const toast = useToast();
 
   const [filter, setFilter] = useState<MessageFilter>('all');
   const [toDelete, setToDelete] = useState<Message | null>(null);
+  const [viewing, setViewing] = useState<Message | null>(null);
+  const hasMore = messages.length >= pageSize;
 
   const contactsById = useMemo(
     () => new Map(contacts.map((c) => [c.id, c])),
@@ -188,7 +195,12 @@ export function Messages() {
                 const isScheduled = message.status === 'scheduled';
 
                 return (
-                  <TableRow key={message.id} hover>
+                  <TableRow
+                    key={message.id}
+                    hover
+                    onClick={() => setViewing(message)}
+                    sx={{ cursor: 'pointer' }}
+                  >
                     <TableCell sx={{ maxWidth: 320 }}>
                       <Typography variant="body2">{preview}</Typography>
                     </TableCell>
@@ -240,7 +252,13 @@ export function Messages() {
                         {formatDate(message.sentAt)}
                       </Typography>
                     </TableCell>
-                    <TableCell align="right">
+                    <TableCell
+                      align="right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <IconButton size="small" onClick={() => setViewing(message)}>
+                        <VisibilityOutlinedIcon fontSize="small" />
+                      </IconButton>
                       {isScheduled && (
                         <IconButton
                           size="small"
@@ -263,8 +281,25 @@ export function Messages() {
               </TableBody>
             </Table>
           </Box>
+          {filter === 'all' && hasMore && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+              <Button
+                onClick={() => setPageSize((size) => size + PAGE_STEP)}
+                disabled={loading}
+              >
+                Carregar mais
+              </Button>
+            </Box>
+          )}
         </Card>
       )}
+
+      <MessageDetailDialog
+        open={Boolean(viewing)}
+        message={viewing}
+        contactsById={contactsById}
+        onClose={() => setViewing(null)}
+      />
 
       <ConfirmDialog
         open={Boolean(toDelete)}
