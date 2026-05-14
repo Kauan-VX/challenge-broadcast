@@ -97,7 +97,9 @@ export function RecipientsPanel({ contacts, readOnly = false }: Props) {
               Destinatários
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {selected.length} de {contacts.length} selecionados
+              {readOnly
+                ? `${selected.length} ${selected.length === 1 ? 'destinatário' : 'destinatários'}`
+                : `${selected.length} de ${contacts.length} selecionados`}
             </Typography>
           </Box>
           <Button

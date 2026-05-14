@@ -166,7 +166,7 @@ export function SendMessage() {
         {editing ? 'Editar mensagem agendada' : 'Enviar mensagem'}
       </Typography>
 
-      {contacts.length === 0 ? (
+      {!editing && contacts.length === 0 ? (
         <Card>
           <CardContent sx={{ textAlign: 'center', py: 8 }}>
             <Box
